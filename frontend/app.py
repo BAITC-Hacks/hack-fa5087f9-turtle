@@ -41,6 +41,7 @@ if result:
     if not result.get("valid", False):
         st.error(result.get("reason", "Набор решений не прошёл проверку."))
     else:
+        context = build_context(decisions, result, initiatives, districts, rules)
         st.subheader("Итог сценария")
         score = result.get("score")
         if score is not None:
@@ -57,15 +58,19 @@ if result:
         if changes:
             st.subheader("Изменения показателей")
             st.dataframe(changes, use_container_width=True, hide_index=True)
-        synergies = result.get("synergies")
+        else:
+            st.info("Движок пока не передал детализацию изменений районов.")
+        synergies = context["synergies"]
         st.subheader("Синергии")
         if synergies:
-            st.write(synergies)
+            for synergy in synergies:
+                district = f' в районе {synergy["district"]}' if synergy.get("district") else ""
+                effects = ", ".join(f"{indicator} +{value}" for indicator, value in synergy["effect"].items())
+                st.write(f'{" + ".join(synergy["pair"])}{district}: {effects}')
         else:
             st.write("Синергии в выбранном наборе не сработали.")
 
         if st.button("Получить AI-объяснение"):
-            context = build_context(decisions, result, initiatives, districts)
             st.session_state["ai_context"] = context
             with st.spinner("Подготавливаем объяснение…"):
                 st.session_state["explanation"] = explain_result(context, decisions)
