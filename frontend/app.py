@@ -18,7 +18,7 @@ st.caption("Распределите общий виртуальный бюдж�
 
 district_data, initiatives, rules = load_data()
 districts = district_data["districts"] if isinstance(district_data, dict) else district_data
-decisions, total_cost = render_selection(initiatives, districts)
+decisions, total_cost = render_selection(initiatives, districts, rules)
 signature = tuple((item["id"], item.get("district")) for item in decisions)
 
 if st.session_state.get("calculated_signature") != signature:
