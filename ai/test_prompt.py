@@ -15,6 +15,10 @@ class PromptTests(unittest.TestCase):
         self.assertIn("Не вычитай значения", SYSTEM_PROMPT)
         self.assertIn("из base_result", SYSTEM_PROMPT)
         self.assertIn("только из поля changes", SYSTEM_PROMPT)
+        self.assertIn("максимум два знака после запятой", SYSTEM_PROMPT)
+        self.assertIn("не пропускай их ради меньших изменений", SYSTEM_PROMPT)
+        self.assertIn("Не придумывай проблемы", SYSTEM_PROMPT)
+        self.assertIn("контекст не позволяет их оценить", SYSTEM_PROMPT)
 
     def test_user_prompt_preserves_context_facts(self):
         context = {
