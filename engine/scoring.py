@@ -34,8 +34,72 @@ def validate_decisions(decisions: list[dict], initiatives: list[dict], rules: di
     не более 2 на направление, несовместимости.
     Возвращает (is_valid, reason_if_invalid).
     """
-    # TODO: реализовать по правилам из data/rules.json
-    raise NotImplementedError
+    if not isinstance(decisions, list):
+        return False, "Решения должны быть списком из 5 мероприятий."
+    required = rules.get("num_decisions", 5)
+    if len(decisions) != required:
+        return False, f"Нужно выбрать ровно {required} мероприятий; сейчас выбрано {len(decisions)}."
+
+    by_id = {item.get("id"): item for item in initiatives}
+    try:
+        districts_data = json.loads((DATA_DIR / "districts.json").read_text(encoding="utf-8"))
+        known_districts = {item["name"] for item in districts_data["districts"]}
+    except (OSError, ValueError, KeyError, TypeError):
+        return False, "Не удалось загрузить список районов для проверки решений."
+
+    ids = []
+    selected = []
+    direction_counts = {}
+    total_cost = 0
+    for index, decision in enumerate(decisions, start=1):
+        if not isinstance(decision, dict):
+            return False, f"Решение №{index} должно содержать ID мероприятия и район."
+        initiative_id = decision.get("id")
+        if not isinstance(initiative_id, str):
+            return False, f"Решение №{index}: укажите ID мероприятия текстом."
+        if initiative_id not in by_id:
+            return False, f"Решение №{index}: неизвестное мероприятие «{initiative_id}»."
+        if initiative_id in ids:
+            return False, f"Мероприятие {initiative_id} выбрано больше одного раза."
+
+        initiative = by_id[initiative_id]
+        district = decision.get("district")
+        if initiative.get("type") == "Район":
+            if not isinstance(district, str) or district not in known_districts:
+                return False, f"Для мероприятия {initiative_id} укажите существующий район."
+        elif initiative.get("type") == "Город":
+            if district is not None:
+                return False, f"Для городского мероприятия {initiative_id} район указывать нельзя."
+        else:
+            return False, f"У мероприятия {initiative_id} неизвестный тип размещения."
+
+        ids.append(initiative_id)
+        selected.append((initiative, district))
+        direction = initiative.get("direction")
+        direction_counts[direction] = direction_counts.get(direction, 0) + 1
+        total_cost += initiative.get("cost", 0)
+
+    limit = rules.get("max_per_direction", 2)
+    for direction, count in direction_counts.items():
+        if count > limit:
+            return False, f"В направлении «{direction}» выбрано {count} мероприятия; максимум — {limit}."
+
+    budget = rules.get("budget", 100)
+    if total_cost > budget:
+        return False, f"Превышен бюджет: стоимость {total_cost} у.е., доступно {budget} у.е."
+
+    chosen = {initiative_id for initiative_id in ids}
+    selected_district = {initiative["id"]: district for initiative, district in selected}
+    for pair in rules.get("incompatible_pairs", []):
+        if len(pair) != 2 or not set(pair).issubset(chosen):
+            continue
+        first, second = pair
+        # M1/M3 являются альтернативами по всему городу; остальные пары
+        # конфликтуют только при попытке разместить обе меры в одном районе.
+        if {first, second} == {"M1", "M3"} or selected_district.get(first) == selected_district.get(second):
+            return False, f"Мероприятия {first} и {second} несовместимы в выбранных районах."
+
+    return True, ""
 
 
 def apply_effects(districts: list[dict], decisions: list[dict], initiatives: list[dict], rules: dict) -> list[dict]:
