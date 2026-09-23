@@ -6,11 +6,21 @@ AI-объяснение результата. Владелец фичи: Том�
 """
 
 import os
+from pathlib import Path
 
-from openai import OpenAI
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    AuthenticationError,
+    BadRequestError,
+    OpenAI,
+    PermissionDeniedError,
+    RateLimitError,
+)
 from ai.prompt import SYSTEM_PROMPT, build_user_prompt
 
 MODEL = "gpt-4o-mini"
+ENV_FILE = Path(__file__).parent.parent / ".env"
 
 FALLBACK_TEXT = (
     "Резервное объяснение без AI: подробности сценария сейчас недоступны. "
@@ -18,13 +28,32 @@ FALLBACK_TEXT = (
 )
 
 
-def _fallback_explanation(context: dict) -> str:
+def _load_local_env() -> None:
+    """Load the two supported settings from an ignored local .env file."""
+    if not ENV_FILE.exists():
+        return
+    for raw_line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        name = name.strip()
+        if name not in {"OPENAI_API_KEY", "OPENAI_MODEL"}:
+            continue
+        value = value.strip().strip('"').strip("'")
+        if value:
+            os.environ.setdefault(name, value)
+
+
+def _fallback_explanation(context: dict, api_status: str | None = None) -> str:
     """Describe only values already present in the engine context."""
     result = context.get("result") or context
     score = context.get("score", result.get("score"))
     score_delta = context.get("score_delta", result.get("score_delta"))
     n_crit = context.get("n_crit", result.get("n_crit"))
     lines = ["Резервное объяснение без AI."]
+    if api_status:
+        lines.append(api_status)
 
     if isinstance(score, (int, float)):
         score_line = f"Итоговый Astana Quality of Life Score: {score:.2f}"
@@ -97,9 +126,13 @@ def explain_result(engine_result: dict, decisions: list[dict]) -> str:
     context = engine_result
     if "decisions" not in context:
         context = {**engine_result, "decisions": decisions}
+    _load_local_env()
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        return _fallback_explanation(context)
+        return _fallback_explanation(
+            context,
+            "Ключ OpenAI не найден. Добавьте OPENAI_API_KEY в локальный файл .env.",
+        )
 
     try:
         client = OpenAI(api_key=api_key, timeout=20.0, max_retries=0)
@@ -113,5 +146,33 @@ def explain_result(engine_result: dict, decisions: list[dict]) -> str:
         )
         content = response.choices[0].message.content
         return content.strip() if content and content.strip() else _fallback_explanation(context)
+    except AuthenticationError:
+        return _fallback_explanation(
+            context,
+            "OpenAI отклонил ключ. Проверьте значение OPENAI_API_KEY в файле .env.",
+        )
+    except PermissionDeniedError:
+        return _fallback_explanation(
+            context,
+            "У проекта этого ключа нет доступа к выбранной модели OpenAI.",
+        )
+    except RateLimitError:
+        return _fallback_explanation(
+            context,
+            "OpenAI сообщил об ограничении запросов или доступного баланса API.",
+        )
+    except (APIConnectionError, APITimeoutError):
+        return _fallback_explanation(
+            context,
+            "Не удалось подключиться к OpenAI. Проверьте интернет и повторите запрос.",
+        )
+    except BadRequestError:
+        return _fallback_explanation(
+            context,
+            "OpenAI не принял запрос или указанную в OPENAI_MODEL модель.",
+        )
     except Exception:
-        return _fallback_explanation(context)
+        return _fallback_explanation(
+            context,
+            "AI-запрос завершился с ошибкой; расчёт движка остаётся действительным.",
+        )
