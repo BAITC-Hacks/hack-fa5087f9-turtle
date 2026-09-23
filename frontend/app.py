@@ -122,7 +122,7 @@ else:
             st.info("Резервное объяснение без AI. Расчёт и таблицы остаются доступными.")
         else:
             st.caption(f"AI-комментарий: {selected_model}. Числовые факты взяты из расчёта движка.")
-        with st.container(border=True):
+        with st.container(border=True, key="ai_explanation"):
             st.markdown(st.session_state["explanation"])
     with st.expander("Проверить факты, переданные AI", expanded=False):
         st.json(context, expanded=False)

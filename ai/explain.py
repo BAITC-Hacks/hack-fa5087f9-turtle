@@ -110,7 +110,7 @@ def _fallback_explanation(context: dict, api_status: str | None = None) -> str:
 
     if context.get("changes") is None:
         lines.append("Детализация изменений районов движком не передана.")
-    return " ".join(lines) if len(lines) > 1 else FALLBACK_TEXT
+    return "\n\n".join(lines) if len(lines) > 1 else FALLBACK_TEXT
 
 
 def configured_model() -> str:

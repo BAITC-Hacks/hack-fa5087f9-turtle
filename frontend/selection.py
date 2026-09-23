@@ -216,7 +216,7 @@ def render_selection(
                     default_district if default_district in district_names else district_names[0]
                 )
 
-        with st.container(border=True):
+        with st.container(border=True, key=f"decision_card_{slot}"):
             left, middle, right = st.columns([5.4, 3.1, 1.1], gap="medium")
             with left:
                 selected_label = st.selectbox(
@@ -260,9 +260,9 @@ def render_selection(
             st.markdown(
                 '<div class="decision-meta">'
                 f'<span class="meta-pill">{escape(str(initiative.get("direction", "")))}</span>'
-                f'<span>Эффект до учёта срока: {escape(effect_summary)}</span>'
                 f'<span>Начало эффекта через {initiative.get("lag", "?")} кв.</span>'
-                '</div>',
+                '</div>'
+                f'<p class="decision-effects">Полный эффект до учёта срока: {escape(effect_summary)}</p>',
                 unsafe_allow_html=True,
             )
 
