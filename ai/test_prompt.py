@@ -19,6 +19,10 @@ class PromptTests(unittest.TestCase):
         self.assertIn("не говори о нерешённых критических проблемах", SYSTEM_PROMPT)
         self.assertIn("Если список synergies непустой", SYSTEM_PROMPT)
         self.assertIn("Не утверждай, что выбор потребовал", SYSTEM_PROMPT)
+        self.assertIn("максимум два знака после запятой", SYSTEM_PROMPT)
+        self.assertIn("не пропускай их ради меньших изменений", SYSTEM_PROMPT)
+        self.assertIn("Не придумывай проблемы", SYSTEM_PROMPT)
+        self.assertIn("контекст не позволяет их оценить", SYSTEM_PROMPT)
 
     def test_user_prompt_preserves_context_facts(self):
         context = {
@@ -26,6 +30,7 @@ class PromptTests(unittest.TestCase):
             "score_delta": 3.98539,
             "d_avg": 58.08,
             "min_district": "Нура",
+            "contributions": [{"indicator": "B1", "delta": 99}],
             "synergies": [
                 {
                     "pair": ["M10", "M12"],
@@ -38,13 +43,16 @@ class PromptTests(unittest.TestCase):
 
         prompt = build_user_prompt(context)
 
-        self.assertIn("56.54307", prompt)
-        self.assertIn("3.98539", prompt)
+        self.assertIn("56.54", prompt)
+        self.assertIn("3.99", prompt)
         self.assertIn("58.08", prompt)
         self.assertIn("Нура", prompt)
         self.assertIn('"M10"', prompt)
         self.assertIn('"M12"', prompt)
         self.assertIn('"bonus": 2', prompt)
+        self.assertNotIn("contributions", prompt)
+        self.assertNotIn('"delta": 99', prompt)
+        self.assertEqual(context["score"], 56.54307)
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+import os
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -24,8 +25,9 @@ SAMPLE_CONTEXT = {
 }
 
 
-def test_missing_key_returns_grounded_fallback(monkeypatch):
+def test_missing_key_returns_grounded_fallback(monkeypatch, tmp_path):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(explain, "ENV_FILE", tmp_path / ".env")
     client_factory = Mock(side_effect=AssertionError("API client must not be created"))
     monkeypatch.setattr(explain, "OpenAI", client_factory)
 
@@ -37,7 +39,23 @@ def test_missing_key_returns_grounded_fallback(monkeypatch):
     assert "Нура: B1 +12.5" in answer
     assert "95 из 100" in answer
     assert "M10 + M12 в районе Нура: B1 +2" in answer
+    assert "Ключ OpenAI не найден" in answer
     client_factory.assert_not_called()
+
+
+def test_key_can_be_loaded_from_local_env(monkeypatch, tmp_path):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text("OPENAI_API_KEY=test-from-env\n", encoding="utf-8")
+    monkeypatch.setattr(explain, "ENV_FILE", env_file)
+    completion = Mock()
+    completion.choices = [SimpleNamespace(message=SimpleNamespace(content="Ответ модели"))]
+    create = Mock(return_value=completion)
+    client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+    monkeypatch.setattr(explain, "OpenAI", Mock(return_value=client))
+
+    assert explain.explain_result(SAMPLE_CONTEXT, []) == "Ответ модели"
+    assert os.environ["OPENAI_API_KEY"] == "test-from-env"
 
 
 def test_successful_api_response_uses_grounded_prompt(monkeypatch):

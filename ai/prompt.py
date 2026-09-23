@@ -3,6 +3,23 @@
 import json
 
 
+EXPLANATION_FIELDS = {
+    "valid",
+    "score",
+    "score_delta",
+    "d_avg",
+    "min_district",
+    "n_crit",
+    "district_scores",
+    "changes",
+    "critical_values",
+    "decisions",
+    "synergies",
+    "total_cost",
+    "budget",
+}
+
+
 SYSTEM_PROMPT = """Ты объясняешь результат учебного симулятора городского бюджета.
 
 Используй только факты и числа из переданного контекста. Не вычисляй новые значения,
@@ -27,6 +44,15 @@ score_delta — изменение итогового Score относитель
 выбранные направления и фактические changes. Не утверждай, что выбор потребовал
 «жертв» или ухудшил непрофинансированные области, если ухудшение не указано явно.
 
+Показывай числа в удобном для человека виде: максимум два знака после запятой,
+без длинных машинных дробей. В разделе об улучшениях сначала назови самые большие
+положительные изменения из поля changes и не пропускай их ради меньших изменений.
+Если n_crit равен 0 и critical_values пуст, прямо скажи, что критических значений
+ниже порога не осталось. Не придумывай проблемы, причины, ограничения бюджета или
+последствия для других районов, которых нет в контексте. Компромиссы описывай только
+по явным отрицательным changes, critical_values, стоимости, лагам и данным выбранных
+мер; при отсутствии таких данных честно скажи, что контекст не позволяет их оценить.
+
 Ответь на русском языке тремя короткими разделами:
 1. Что улучшилось.
 2. Какие проблемы остались.
@@ -37,9 +63,23 @@ score_delta — изменение итогового Score относитель
 """
 
 
+def _for_explanation(value):
+    """Create a display-only copy with readable floats; engine data stays untouched."""
+    if isinstance(value, float):
+        return round(value, 2)
+    if isinstance(value, dict):
+        return {key: _for_explanation(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_for_explanation(item) for item in value]
+    return value
+
+
 def build_user_prompt(context: dict) -> str:
-    """Serializes the engine context without changing or rounding its numbers."""
-    payload = json.dumps(context, ensure_ascii=False, sort_keys=True)
+    """Serializes a human-readable copy of the already calculated context."""
+    grounded_context = {
+        key: context[key] for key in EXPLANATION_FIELDS if key in context
+    }
+    payload = json.dumps(_for_explanation(grounded_context), ensure_ascii=False, sort_keys=True)
     return (
         "Ниже приведён результат, полностью рассчитанный детерминированным движком. "
         "Объясни его по правилам системного промпта.\n\n"
