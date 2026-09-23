@@ -3,6 +3,7 @@ from copy import deepcopy
 import pytest
 
 from engine.scoring import apply_effects, load_data
+from engine.changes import describe_changes
 
 
 @pytest.fixture
@@ -99,3 +100,30 @@ def test_clip_happens_after_all_effects_are_summed(simulation_data):
 
     updated = by_name(apply_effects(districts, decisions, initiatives, rules))
     assert updated["Есиль"]["T1"] == pytest.approx(65)
+
+
+def test_describe_changes_marks_critical_values_and_synergy(simulation_data):
+    districts, initiatives, rules = simulation_data
+    decisions = [
+        {"id": "M10", "district": "Нура"},
+        {"id": "M12", "district": None},
+    ]
+    updated = apply_effects(districts, decisions, initiatives, rules)
+
+    description = describe_changes(districts, updated, decisions, rules)
+    nura_s1 = next(
+        row
+        for row in description["changes"]
+        if row["district"] == "Нура" and row["indicator"] == "S1"
+    )
+
+    assert nura_s1["after"] == 38
+    assert nura_s1["critical"] is True
+    assert description["synergies"] == [
+        {
+            "pair": ["M10", "M12"],
+            "district": "Нура",
+            "indicator": "B1",
+            "bonus": 2,
+        }
+    ]
