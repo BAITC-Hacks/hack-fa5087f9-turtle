@@ -7,7 +7,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from ai.context import build_context  # noqa: E402
-from ai.explain import explain_result  # noqa: E402
+from ai.explain import configured_model, explain_result  # noqa: E402
 from engine.changes import describe_changes  # noqa: E402
 from engine.scoring import load_data, run  # noqa: E402
 from frontend.changes import render_changes  # noqa: E402
@@ -90,12 +90,23 @@ if result:
         else:
             st.info("Движок пока не передал детализацию изменений районов.")
 
+        models = list(dict.fromkeys([configured_model(), "gpt-4.1", "gpt-4o-mini"]))
+        selected_model = st.selectbox("Модель AI", models, key="ai_model")
+        offline = st.checkbox("Показать работу без AI", key="offline_demo",
+                              help="Запрос к API не отправляется. Можно проверить резервное объяснение.")
+        if st.session_state.get("explanation_settings") != (selected_model, offline):
+            st.session_state.pop("explanation", None)
         if st.button("Получить AI-объяснение"):
             st.session_state["ai_context"] = context
             with st.spinner("Подготавливаем объяснение…"):
-                st.session_state["explanation"] = explain_result(context, decisions)
+                st.session_state["explanation"] = explain_result(context, decisions, model=selected_model, offline=offline)
+                st.session_state["explanation_settings"] = (selected_model, offline)
         if st.session_state.get("explanation"):
             st.subheader("Объяснение сценария")
+            if st.session_state["explanation"].startswith("Резервное объяснение без AI"):
+                st.info("Резервное объяснение без AI. Score и таблицы рассчитаны движком и остаются доступны.")
+            else:
+                st.caption(f"AI-комментарий: {selected_model}. Числовые факты подставлены из расчёта движка.")
             st.write(st.session_state["explanation"])
 else:
     st.info("Выберите пять решений и нажмите «Рассчитать сценарий».")

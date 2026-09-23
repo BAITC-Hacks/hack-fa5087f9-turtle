@@ -1,0 +1,5 @@
+# Versions used for the final local verification (Python 3.14.7).
+# Primary dependencies; pip resolves their declared transitive dependencies.
+streamlit==1.64.0
+openai==3.19.0
+pytest==9.1.1

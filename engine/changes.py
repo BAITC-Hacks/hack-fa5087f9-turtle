@@ -1,6 +1,28 @@
 """Подготовка изменений районов и синергий для интерфейса и AI-контекста."""
 
 
+def describe_contributions(decisions: list[dict], initiatives: list[dict], rules: dict) -> list[dict]:
+    """Individual contributions after lag, before the final clip and synergies.
+
+    These are not final deltas: several measures and synergies may affect one
+    indicator, and the final value is clipped only after summing them all.
+    """
+    by_id = {item["id"]: item for item in initiatives}
+    horizon = rules["horizon_quarters"]
+    return [
+        {
+            "id": decision["id"],
+            "district": decision.get("district"),
+            "scope": by_id[decision["id"]]["type"],
+            "effects_after_lag_before_clip": {
+                indicator: effect * (horizon - by_id[decision["id"]]["lag"]) / horizon
+                for indicator, effect in by_id[decision["id"]]["effects"].items()
+            },
+        }
+        for decision in decisions
+    ]
+
+
 def describe_changes(
     before: list[dict],
     after: list[dict],

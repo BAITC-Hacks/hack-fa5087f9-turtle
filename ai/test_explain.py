@@ -1,4 +1,5 @@
 import os
+import json
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -24,6 +25,19 @@ SAMPLE_CONTEXT = {
     ],
 }
 
+MODEL_PARAGRAPHS = {
+    "improvements": "Выбранный набор улучшает безопасность и социальную инфраструктуру Нуры.",
+    "remaining_problems": "Отсутствие критических значений не означает устранение всех городских проблем.",
+    "tradeoffs": "Средства направлены на выбранные приоритеты, а сроки мер ограничивают реализованный эффект.",
+}
+
+
+def completion_response(content=None, finish_reason="stop"):
+    return SimpleNamespace(choices=[SimpleNamespace(
+        message=SimpleNamespace(content=content or json.dumps(MODEL_PARAGRAPHS, ensure_ascii=False)),
+        finish_reason=finish_reason,
+    )])
+
 
 def test_missing_key_returns_grounded_fallback(monkeypatch, tmp_path):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -48,20 +62,18 @@ def test_key_can_be_loaded_from_local_env(monkeypatch, tmp_path):
     env_file = tmp_path / ".env"
     env_file.write_text("OPENAI_API_KEY=test-from-env\n", encoding="utf-8")
     monkeypatch.setattr(explain, "ENV_FILE", env_file)
-    completion = Mock()
-    completion.choices = [SimpleNamespace(message=SimpleNamespace(content="Ответ модели"))]
+    completion = completion_response()
     create = Mock(return_value=completion)
     client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
     monkeypatch.setattr(explain, "OpenAI", Mock(return_value=client))
 
-    assert explain.explain_result(SAMPLE_CONTEXT, []) == "Ответ модели"
+    assert MODEL_PARAGRAPHS["improvements"] in explain.explain_result(SAMPLE_CONTEXT, [])
     assert os.environ["OPENAI_API_KEY"] == "test-from-env"
 
 
 def test_successful_api_response_uses_grounded_prompt(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
-    completion = Mock()
-    completion.choices = [SimpleNamespace(message=SimpleNamespace(content="Улучшились показатели Нуры."))]
+    completion = completion_response()
     create = Mock(return_value=completion)
     client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
     client_factory = Mock(return_value=client)
@@ -69,11 +81,15 @@ def test_successful_api_response_uses_grounded_prompt(monkeypatch):
 
     answer = explain.explain_result(SAMPLE_CONTEXT, [])
 
-    assert answer == "Улучшились показатели Нуры."
+    assert MODEL_PARAGRAPHS["improvements"] in answer
+    assert "Score: 56.54 (+3.98 к базе)" in answer
+    assert "Стоимость: 95 из 100" in answer
+    assert "M10 + M12 в районе Нура: B1 +2" in answer
     assert client_factory.call_args.kwargs["timeout"] == 20.0
     assert client_factory.call_args.kwargs["max_retries"] == 0
     assert create.call_args.kwargs["messages"][0]["content"] == explain.SYSTEM_PROMPT
     assert "56.54" in create.call_args.kwargs["messages"][1]["content"]
+    assert create.call_args.kwargs["response_format"]["json_schema"]["strict"] is True
 
 
 def test_api_error_returns_fallback_without_leaking_exception(monkeypatch):

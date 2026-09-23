@@ -18,6 +18,7 @@ from openai import (
     RateLimitError,
 )
 from ai.prompt import SYSTEM_PROMPT, build_user_prompt
+from ai.response import RESPONSE_FORMAT, number, render_response, synergy_texts
 
 MODEL = "gpt-4o-mini"
 ENV_FILE = Path(__file__).parent.parent / ".env"
@@ -68,7 +69,7 @@ def _fallback_explanation(context: dict, api_status: str | None = None) -> str:
     improvements.sort(key=lambda change: change["delta"], reverse=True)
     if improvements:
         highlights = [
-            f'{change["district"]}: {change["indicator"]} +{change["delta"]:g}'
+            f'{change["district"]}: {change["indicator"]} +{number(change["delta"])}'
             for change in improvements[:3]
         ]
         lines.append("Наибольшие улучшения по данным движка: " + "; ".join(highlights) + ".")
@@ -95,15 +96,7 @@ def _fallback_explanation(context: dict, api_status: str | None = None) -> str:
 
     synergies = context.get("synergies") or []
     if synergies:
-        details = []
-        for synergy in synergies:
-            pair = " + ".join(synergy.get("pair", []))
-            district = f' в районе {synergy["district"]}' if synergy.get("district") else ""
-            indicator = synergy.get("indicator")
-            bonus = synergy.get("bonus")
-            effect = f": {indicator} +{bonus:g}" if indicator and isinstance(bonus, (int, float)) else ""
-            if pair:
-                details.append(f"{pair}{district}{effect}")
+        details = synergy_texts(context)
         if details:
             lines.append("Сработавшие синергии: " + "; ".join(details) + ".")
     else:
@@ -114,7 +107,12 @@ def _fallback_explanation(context: dict, api_status: str | None = None) -> str:
     return " ".join(lines) if len(lines) > 1 else FALLBACK_TEXT
 
 
-def explain_result(engine_result: dict, decisions: list[dict]) -> str:
+def configured_model() -> str:
+    _load_local_env()
+    return os.getenv("OPENAI_MODEL", MODEL)
+
+
+def explain_result(engine_result: dict, decisions: list[dict], *, model: str | None = None, offline: bool = False) -> str:
     """
     engine_result: результат engine.scoring.run() (score, district_scores, n_crit, ...)
     decisions: выбранные решения
@@ -126,6 +124,8 @@ def explain_result(engine_result: dict, decisions: list[dict]) -> str:
     context = engine_result
     if "decisions" not in context:
         context = {**engine_result, "decisions": decisions}
+    if offline:
+        return _fallback_explanation(context, "Включён демонстрационный режим без AI.")
     _load_local_env()
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -137,15 +137,22 @@ def explain_result(engine_result: dict, decisions: list[dict]) -> str:
     try:
         client = OpenAI(api_key=api_key, timeout=20.0, max_retries=0)
         response = client.chat.completions.create(
-            model=os.getenv("OPENAI_MODEL", MODEL),
+            model=model or configured_model(),
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": build_user_prompt(context)},
             ],
             temperature=0.3,
+            response_format=RESPONSE_FORMAT,
+            max_completion_tokens=900,
         )
         content = response.choices[0].message.content
-        return content.strip() if content and content.strip() else _fallback_explanation(context)
+        if response.choices[0].finish_reason != "stop" or not content:
+            return _fallback_explanation(context, "AI не вернул полное объяснение.")
+        try:
+            return render_response(content, context)
+        except (ValueError, TypeError):
+            return _fallback_explanation(context, "Ответ AI не прошёл проверку формата или фактов. Повторите запрос.")
     except AuthenticationError:
         return _fallback_explanation(
             context,

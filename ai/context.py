@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from engine.changes import describe_changes, describe_contributions
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
@@ -75,16 +77,30 @@ def build_context(
                 ),
                 "effect": synergy["effect"],
             })
+    changes = engine_result.get("changes")
+    if changes is None and engine_result.get("after") is not None:
+        changes = describe_changes(before, engine_result["after"], decisions, rules)["changes"]
+    critical_values = (
+        [{"district": row["district"], "indicator": row["indicator"], "value": row["after"]}
+         for row in changes if row["after"] < rules["critical_threshold"]]
+        if changes is not None else engine_result.get("critical_values")
+    )
+    result_fields["critical_values"] = critical_values
+    total_cost = sum(item["cost"] for item in selected)
     return {
         "decisions": selected,
-        "total_cost": sum(item["cost"] for item in selected),
+        "total_cost": total_cost,
         "budget": rules.get("budget"),
+        "budget_remaining": rules["budget"] - total_cost,
+        "horizon_quarters": rules["horizon_quarters"],
+        "critical_threshold": rules["critical_threshold"],
+        "realized_contributions": describe_contributions(decisions, initiatives, rules),
         "base_result": engine_result.get("base_result"),
         **result_fields,
         "result": result_fields,
         "before": before,
         "after": engine_result.get("after"),
-        "changes": engine_result.get("changes"),
+        "changes": changes,
         "synergies": synergies,
         "district_profiles": {
             name: districts_data.get("profiles", {}).get(name)
