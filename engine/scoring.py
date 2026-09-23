@@ -206,21 +206,31 @@ def compute_score(updated_districts: list[dict], rules: dict) -> dict:
 def run(decisions: list[dict]) -> dict:
     """Точка входа: базовый расчёт либо валидация -> эффекты -> Score."""
     districts, initiatives, rules = load_data()
+    base_result = compute_score(districts, rules)
 
     # Пустой список используется тестами для базового Score. Это отдельный
     # режим расчёта и не делает пустой набор допустимым игровым выбором:
     # validate_decisions([]) по-прежнему возвращает False.
     if decisions == []:
-        result = compute_score(districts, rules)
-        result["valid"] = True
-        return result
+        base_result["valid"] = True
+        return base_result
 
     ok, reason = validate_decisions(decisions, initiatives, rules)
     if not ok:
         return {"valid": False, "reason": reason}
+
     updated = apply_effects(districts, decisions, initiatives, rules)
     result = compute_score(updated, rules)
-    result["valid"] = True
+    result.update(
+        {
+            "valid": True,
+            "base_result": base_result,
+            "base_score": base_result["score"],
+            "score_delta": result["score"] - base_result["score"],
+            "before": districts,
+            "after": updated,
+        }
+    )
     return result
 
 
