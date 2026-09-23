@@ -25,8 +25,9 @@ SAMPLE_CONTEXT = {
 }
 
 
-def test_missing_key_returns_grounded_fallback(monkeypatch):
+def test_missing_key_returns_grounded_fallback(monkeypatch, tmp_path):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(explain, "ENV_FILE", tmp_path / ".env")
     client_factory = Mock(side_effect=AssertionError("API client must not be created"))
     monkeypatch.setattr(explain, "OpenAI", client_factory)
 
