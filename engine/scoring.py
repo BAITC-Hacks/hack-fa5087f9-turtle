@@ -1,6 +1,7 @@
 """
 Движок расчёта Astana Quality of Life Score.
-Владелец фичи: [впишите имя]
+Владельцы функций: validate_decisions — Ардак; apply_effects — Айсана;
+compute_score и run — Томирис.
 
 Формула (см. /data/rules.json и README.md):
   1. I'_dk = clip(I_dk + sum(effect_m,k * (8 - lag_m)/8) + synergies, 0, 100)

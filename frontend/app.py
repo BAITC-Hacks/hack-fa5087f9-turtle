@@ -8,7 +8,9 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from ai.context import build_context  # noqa: E402
 from ai.explain import explain_result  # noqa: E402
+from engine.changes import describe_changes  # noqa: E402
 from engine.scoring import load_data, run  # noqa: E402
+from frontend.changes import render_changes  # noqa: E402
 from frontend.selection import render_selection  # noqa: E402
 
 
@@ -41,7 +43,15 @@ if result:
     if not result.get("valid", False):
         st.error(result.get("reason", "Набор решений не прошёл проверку."))
     else:
-        context = build_context(decisions, result, initiatives, districts, rules)
+        display_result = result
+        if result.get("before") is not None and result.get("after") is not None:
+            change_summary = describe_changes(result["before"], result["after"], decisions, rules)
+            display_result = {
+                **result,
+                "changes": result.get("changes") or change_summary["changes"],
+                "synergies": result.get("synergies") or change_summary["synergies"],
+            }
+        context = build_context(decisions, display_result, initiatives, districts, rules)
         st.subheader("Итог сценария")
         score = result.get("score")
         score_delta = result.get("score_delta")
@@ -73,21 +83,12 @@ if result:
                 hide_index=True,
             )
 
-        changes = result.get("changes")
-        if changes:
-            st.subheader("Изменения показателей")
-            st.dataframe(changes, use_container_width=True, hide_index=True)
+        if display_result.get("changes") is not None:
+            if "changes_district" not in st.session_state:
+                st.session_state["changes_district"] = result.get("min_district")
+            render_changes(display_result["changes"], display_result.get("synergies", []))
         else:
             st.info("Движок пока не передал детализацию изменений районов.")
-        synergies = context["synergies"]
-        st.subheader("Синергии")
-        if synergies:
-            for synergy in synergies:
-                district = f' в районе {synergy["district"]}' if synergy.get("district") else ""
-                effects = ", ".join(f"{indicator} +{value}" for indicator, value in synergy["effect"].items())
-                st.write(f'{" + ".join(synergy["pair"])}{district}: {effects}')
-        else:
-            st.write("Синергии в выбранном наборе не сработали.")
 
         if st.button("Получить AI-объяснение"):
             st.session_state["ai_context"] = context
