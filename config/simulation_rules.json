@@ -1,0 +1,22 @@
+{
+  "budget": 100,
+  "required_decisions": 5,
+  "max_measures_per_direction": 2,
+  "simulation_horizon_quarters": 8,
+  "indicator_range": {
+    "minimum": 0,
+    "maximum": 100
+  },
+  "score": {
+    "city_average_weight": 0.7,
+    "weakest_district_weight": 0.3,
+    "critical_threshold": 40,
+    "critical_penalty": 1.0
+  },
+  "validation": {
+    "allow_duplicate_measures": false,
+    "district_required_for_district_measure": true,
+    "district_forbidden_for_city_measure": true,
+    "calculate_score_for_invalid_selection": false
+  }
+}
