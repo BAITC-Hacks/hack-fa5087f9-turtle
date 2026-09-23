@@ -15,6 +15,10 @@ class PromptTests(unittest.TestCase):
         self.assertIn("Не вычитай значения", SYSTEM_PROMPT)
         self.assertIn("из base_result", SYSTEM_PROMPT)
         self.assertIn("только из поля changes", SYSTEM_PROMPT)
+        self.assertIn("Если n_crit равно 0", SYSTEM_PROMPT)
+        self.assertIn("не говори о нерешённых критических проблемах", SYSTEM_PROMPT)
+        self.assertIn("Если список synergies непустой", SYSTEM_PROMPT)
+        self.assertIn("Не утверждай, что выбор потребовал", SYSTEM_PROMPT)
 
     def test_user_prompt_preserves_context_facts(self):
         context = {
