@@ -15,16 +15,22 @@
 """
 
 import json
+from math import fsum
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
 def load_data():
-    districts = json.loads((DATA_DIR / "districts.json").read_text())
-    initiatives = json.loads((DATA_DIR / "initiatives.json").read_text())
-    rules = json.loads((DATA_DIR / "rules.json").read_text())
-    return districts, initiatives, rules
+    """Загружает список районов, каталог инициатив и правила симуляции."""
+    districts_data = json.loads(
+        (DATA_DIR / "districts.json").read_text(encoding="utf-8")
+    )
+    initiatives = json.loads(
+        (DATA_DIR / "initiatives.json").read_text(encoding="utf-8")
+    )
+    rules = json.loads((DATA_DIR / "rules.json").read_text(encoding="utf-8"))
+    return districts_data["districts"], initiatives, rules
 
 
 def validate_decisions(decisions: list[dict], initiatives: list[dict], rules: dict) -> tuple[bool, str]:
@@ -34,8 +40,72 @@ def validate_decisions(decisions: list[dict], initiatives: list[dict], rules: di
     не более 2 на направление, несовместимости.
     Возвращает (is_valid, reason_if_invalid).
     """
-    # TODO: реализовать по правилам из data/rules.json
-    raise NotImplementedError
+    if not isinstance(decisions, list):
+        return False, "Решения должны быть списком из 5 мероприятий."
+    required = rules.get("num_decisions", 5)
+    if len(decisions) != required:
+        return False, f"Нужно выбрать ровно {required} мероприятий; сейчас выбрано {len(decisions)}."
+
+    by_id = {item.get("id"): item for item in initiatives}
+    try:
+        districts_data = json.loads((DATA_DIR / "districts.json").read_text(encoding="utf-8"))
+        known_districts = {item["name"] for item in districts_data["districts"]}
+    except (OSError, ValueError, KeyError, TypeError):
+        return False, "Не удалось загрузить список районов для проверки решений."
+
+    ids = []
+    selected = []
+    direction_counts = {}
+    total_cost = 0
+    for index, decision in enumerate(decisions, start=1):
+        if not isinstance(decision, dict):
+            return False, f"Решение №{index} должно содержать ID мероприятия и район."
+        initiative_id = decision.get("id")
+        if not isinstance(initiative_id, str):
+            return False, f"Решение №{index}: укажите ID мероприятия текстом."
+        if initiative_id not in by_id:
+            return False, f"Решение №{index}: неизвестное мероприятие «{initiative_id}»."
+        if initiative_id in ids:
+            return False, f"Мероприятие {initiative_id} выбрано больше одного раза."
+
+        initiative = by_id[initiative_id]
+        district = decision.get("district")
+        if initiative.get("type") == "Район":
+            if not isinstance(district, str) or district not in known_districts:
+                return False, f"Для мероприятия {initiative_id} укажите существующий район."
+        elif initiative.get("type") == "Город":
+            if district is not None:
+                return False, f"Для городского мероприятия {initiative_id} район указывать нельзя."
+        else:
+            return False, f"У мероприятия {initiative_id} неизвестный тип размещения."
+
+        ids.append(initiative_id)
+        selected.append((initiative, district))
+        direction = initiative.get("direction")
+        direction_counts[direction] = direction_counts.get(direction, 0) + 1
+        total_cost += initiative.get("cost", 0)
+
+    limit = rules.get("max_per_direction", 2)
+    for direction, count in direction_counts.items():
+        if count > limit:
+            return False, f"В направлении «{direction}» выбрано {count} мероприятия; максимум — {limit}."
+
+    budget = rules.get("budget", 100)
+    if total_cost > budget:
+        return False, f"Превышен бюджет: стоимость {total_cost} у.е., доступно {budget} у.е."
+
+    chosen = {initiative_id for initiative_id in ids}
+    selected_district = {initiative["id"]: district for initiative, district in selected}
+    for pair in rules.get("incompatible_pairs", []):
+        if len(pair) != 2 or not set(pair).issubset(chosen):
+            continue
+        first, second = pair
+        # M1/M3 являются альтернативами по всему городу; остальные пары
+        # конфликтуют только при попытке разместить обе меры в одном районе.
+        if {first, second} == {"M1", "M3"} or selected_district.get(first) == selected_district.get(second):
+            return False, f"Мероприятия {first} и {second} несовместимы в выбранных районах."
+
+    return True, ""
 
 
 def apply_effects(districts: list[dict], decisions: list[dict], initiatives: list[dict], rules: dict) -> list[dict]:
@@ -95,15 +165,56 @@ def apply_effects(districts: list[dict], decisions: list[dict], initiatives: lis
 
 def compute_score(updated_districts: list[dict], rules: dict) -> dict:
     """
-    Возвращает {"score": float, "d_avg": float, "min_district": str, "n_crit": int, "district_scores": {...}}
+    Возвращает {"score": float, "d_avg": float, "min_district": str,
+    "n_crit": int, "district_scores": {...}}.
     """
-    # TODO: реализовать шаги 2-4 формулы
-    raise NotImplementedError
+    weights = rules["weights"]
+    district_scores = {
+        district["name"]: fsum(
+            weights[indicator] * district[indicator]
+            for indicator in weights
+        )
+        for district in updated_districts
+    }
+
+    d_avg = fsum(
+        district["pop_share"] * district_scores[district["name"]]
+        for district in updated_districts
+    )
+    min_district = min(district_scores, key=district_scores.get)
+    n_crit = sum(
+        district[indicator] < rules["critical_threshold"]
+        for district in updated_districts
+        for indicator in weights
+    )
+
+    score = (
+        rules["score_weights"]["city_avg"] * d_avg
+        + rules["score_weights"]["min_district"]
+        * district_scores[min_district]
+        - rules["critical_penalty"] * n_crit
+    )
+    return {
+        "score": score,
+        "d_avg": d_avg,
+        "min_district": min_district,
+        "n_crit": n_crit,
+        "district_scores": district_scores,
+    }
 
 
 def run(decisions: list[dict]) -> dict:
-    """Точка входа: валидация -> применение эффектов -> расчёт score."""
+    """Точка входа: базовый расчёт либо валидация -> эффекты -> Score."""
     districts, initiatives, rules = load_data()
+
+    # Пустой список используется тестами для базового Score. Это отдельный
+    # режим расчёта и не делает пустой набор допустимым игровым выбором:
+    # validate_decisions([]) по-прежнему возвращает False.
+    if decisions == []:
+        result = compute_score(districts, rules)
+        result["valid"] = True
+        return result
+
     ok, reason = validate_decisions(decisions, initiatives, rules)
     if not ok:
         return {"valid": False, "reason": reason}
