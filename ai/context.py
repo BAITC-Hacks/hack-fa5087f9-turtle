@@ -33,8 +33,11 @@ def build_context(
             "id": initiative["id"],
             "name": initiative["name"],
             "direction": initiative["direction"],
+            "type": initiative["type"],
             "cost": initiative["cost"],
             "district": decision.get("district"),
+            "lag": initiative["lag"],
+            "effects": initiative["effects"],
         })
 
     before = engine_result.get("before")
@@ -57,6 +60,5 @@ def build_context(
         "district_profiles": {
             name: districts_data.get("profiles", {}).get(name)
             for name in districts_by_name
-            if name in {item.get("district") for item in decisions}
         },
     }

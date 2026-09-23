@@ -12,7 +12,13 @@ def render_selection(
     rules: dict,
 ) -> tuple[list[dict], int]:
     """Render five decision slots and return ``[{id, district}, ...]`` and cost."""
-    names = {item["id"]: f'{item["id"]} — {item["name"]} ({item["cost"]} у.е.)' for item in initiatives}
+    names = {
+        item["id"]: (
+            f'{item["id"]} — {item["name"]} '
+            f'· {item["direction"]}, {item["type"]} · {item["cost"]} у.е.'
+        )
+        for item in initiatives
+    }
     by_label = {label: initiative_id for initiative_id, label in names.items()}
     by_id = {item["id"]: item for item in initiatives}
     district_names = [item["name"] for item in districts]
@@ -27,6 +33,7 @@ def render_selection(
     ]
 
     st.subheader("Выберите пять мероприятий")
+    st.caption("При открытии загружен контрольный пример из ТЗ; его можно изменить.")
     decisions = []
     total_cost = 0
     for slot in range(decision_count):
@@ -41,7 +48,11 @@ def render_selection(
             st.session_state[district_key] = default_district
 
         current_label = st.session_state.get(key, names[default_id])
-        previous_id = by_label.get(current_label, all_ids[slot % len(all_ids)])
+        previous_id = by_label.get(current_label)
+        if previous_id is None:
+            current_label = names[default_id]
+            st.session_state[key] = current_label
+            previous_id = default_id
         previous_type = st.session_state.get(f"decision_{slot}_type")
         current_type = by_id[previous_id]["type"]
         if previous_type != current_type and current_type == "Город":
