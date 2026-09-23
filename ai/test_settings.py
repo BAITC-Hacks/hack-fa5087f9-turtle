@@ -17,7 +17,7 @@ def test_unreadable_env_returns_fallback_without_exposing_details(monkeypatch, e
     monkeypatch.setattr(explain, "OpenAI", factory)
     assert explain.configured_model() == "gpt-4o-mini"
     answer = explain.explain_result(SAMPLE_CONTEXT, [])
-    assert "Не удалось прочитать локальный .env" in answer
+    assert "Не удалось загрузить настройки AI" in answer
     assert "56.54" in answer and "95 из 100" in answer
     assert "private" not in answer
     factory.assert_not_called()
@@ -44,5 +44,5 @@ def test_blank_key_and_model_are_handled_as_missing(monkeypatch, tmp_path):
     factory = Mock(side_effect=AssertionError("must not call API"))
     monkeypatch.setattr(explain, "OpenAI", factory)
     assert explain.configured_model() == "gpt-4o-mini"
-    assert "Ключ OpenAI не найден" in explain.explain_result(SAMPLE_CONTEXT, [])
+    assert "AI пока не подключён" in explain.explain_result(SAMPLE_CONTEXT, [])
     factory.assert_not_called()

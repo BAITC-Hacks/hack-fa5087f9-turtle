@@ -123,6 +123,7 @@ engine/
 frontend/
   app.py                  точка входа Streamlit и сборка сценария
   selection.py            выбор мер, районов и отображение бюджета
+  result.py               Score, среднее, слабейший район и баллы районов
   changes.py              таблицы изменений и синергий
   test_app.py             проверки интерфейса
 ai/

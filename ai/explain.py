@@ -36,7 +36,7 @@ def _load_local_env() -> str | None:
     except FileNotFoundError:
         return None
     except (OSError, UnicodeError):
-        return "Не удалось прочитать локальный .env. Проверьте доступ к файлу и кодировку UTF-8."
+        return "Не удалось загрузить настройки AI. Показано резервное объяснение."
     for raw_line in local_settings.splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -96,7 +96,7 @@ def _fallback_explanation(context: dict, api_status: str | None = None) -> str:
         choice_line = "Выбранные меры: " + ", ".join(names)
         if isinstance(total_cost, (int, float)) and isinstance(budget, (int, float)):
             choice_line += f"; стоимость {total_cost:g} из {budget:g} у.е."
-        lines.append(choice_line + ".")
+        lines.append(choice_line.rstrip(".") + ".")
 
     synergies = context.get("synergies") or []
     if synergies:
@@ -140,7 +140,7 @@ def explain_result(engine_result: dict, decisions: list[dict], *, model: str | N
     if not api_key:
         return _fallback_explanation(
             context,
-            config_error or "Ключ OpenAI не найден. Добавьте OPENAI_API_KEY в локальный файл .env.",
+            config_error or "AI пока не подключён. Показано резервное объяснение.",
         )
 
     try:
@@ -165,12 +165,12 @@ def explain_result(engine_result: dict, decisions: list[dict], *, model: str | N
     except AuthenticationError:
         return _fallback_explanation(
             context,
-            "OpenAI отклонил ключ. Проверьте значение OPENAI_API_KEY в файле .env.",
+            "Сервис AI отклонил доступ. Обратитесь к команде проекта.",
         )
     except PermissionDeniedError:
         return _fallback_explanation(
             context,
-            "У проекта этого ключа нет доступа к выбранной модели OpenAI.",
+            "Выбранная модель недоступна для проекта. Попробуйте другую модель.",
         )
     except RateLimitError:
         return _fallback_explanation(
@@ -185,7 +185,7 @@ def explain_result(engine_result: dict, decisions: list[dict], *, model: str | N
     except BadRequestError:
         return _fallback_explanation(
             context,
-            "OpenAI не принял запрос или указанную в OPENAI_MODEL модель.",
+            "Не удалось получить ответ выбранной модели. Попробуйте другую модель.",
         )
     except Exception:
         return _fallback_explanation(
