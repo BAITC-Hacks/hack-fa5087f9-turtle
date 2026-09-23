@@ -1,0 +1,39 @@
+{
+  "budget": 100,
+  "num_decisions": 5,
+  "max_per_direction": 2,
+  "horizon_quarters": 8,
+  "weights": {
+    "T1": 0.10, "T2": 0.10, "E1": 0.09, "E2": 0.11, "S1": 0.11,
+    "S2": 0.11, "B1": 0.09, "B2": 0.09, "C1": 0.10, "C2": 0.10
+  },
+  "critical_threshold": 40,
+  "critical_penalty": 1.0,
+  "score_weights": {"city_avg": 0.7, "min_district": 0.3},
+  "incompatible_pairs": [["M1", "M3"], ["M4", "M7"], ["M5", "M13"]],
+  "synergies": [
+    {"pair": ["M1", "M2"], "effect": {"T1": 2}, "applies_to": "district_of_first"},
+    {"pair": ["M10", "M12"], "effect": {"B1": 2}, "applies_to": "district_of_first"},
+    {"pair": ["M5", "M6"], "effect": {"E2": 2}, "applies_to": "district_of_first"}
+  ],
+  "known_results": {
+    "base_score_no_actions": 52.56,
+    "base_score_note": "0.7 * 56.86 + 0.3 * 49.18 - 2 (2 критических значения: S1 и S2 в Нуре)",
+    "example_valid_set": {
+      "decisions": [
+        {"id": "M7", "district": "Нура"},
+        {"id": "M8", "district": "Нура"},
+        {"id": "M10", "district": "Нура"},
+        {"id": "M12", "district": null},
+        {"id": "M5", "district": "Сарыарка"}
+      ],
+      "total_cost": 95,
+      "expected_score_approx": 56.5,
+      "note": "Синергия M10+M12 должна сработать в Нуре"
+    },
+    "cheapest_valid_set": {
+      "decisions": ["M9", "M11", "M10", "M12", "M4"],
+      "total_cost": 61
+    }
+  }
+}
