@@ -26,6 +26,7 @@ class PromptTests(unittest.TestCase):
             "score_delta": 3.98539,
             "d_avg": 58.08,
             "min_district": "Нура",
+            "contributions": [{"indicator": "B1", "delta": 99}],
             "synergies": [
                 {
                     "pair": ["M10", "M12"],
@@ -45,6 +46,8 @@ class PromptTests(unittest.TestCase):
         self.assertIn('"M10"', prompt)
         self.assertIn('"M12"', prompt)
         self.assertIn('"bonus": 2', prompt)
+        self.assertNotIn("contributions", prompt)
+        self.assertNotIn("99", prompt)
         self.assertEqual(context["score"], 56.54307)
 
 

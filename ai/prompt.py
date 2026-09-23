@@ -3,6 +3,23 @@
 import json
 
 
+EXPLANATION_FIELDS = {
+    "valid",
+    "score",
+    "score_delta",
+    "d_avg",
+    "min_district",
+    "n_crit",
+    "district_scores",
+    "changes",
+    "critical_values",
+    "decisions",
+    "synergies",
+    "total_cost",
+    "budget",
+}
+
+
 SYSTEM_PROMPT = """Ты объясняешь результат учебного симулятора городского бюджета.
 
 Используй только факты и числа из переданного контекста. Не вычисляй новые значения,
@@ -48,7 +65,10 @@ def _for_explanation(value):
 
 def build_user_prompt(context: dict) -> str:
     """Serializes a human-readable copy of the already calculated context."""
-    payload = json.dumps(_for_explanation(context), ensure_ascii=False, sort_keys=True)
+    grounded_context = {
+        key: context[key] for key in EXPLANATION_FIELDS if key in context
+    }
+    payload = json.dumps(_for_explanation(grounded_context), ensure_ascii=False, sort_keys=True)
     return (
         "Ниже приведён результат, полностью рассчитанный детерминированным движком. "
         "Объясни его по правилам системного промпта.\n\n"
