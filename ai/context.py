@@ -48,7 +48,15 @@ def build_context(
         before = districts
     result_fields = {
         key: engine_result.get(key)
-        for key in ("score", "d_avg", "min_district", "n_crit", "district_scores")
+        for key in (
+            "score",
+            "score_delta",
+            "d_avg",
+            "min_district",
+            "n_crit",
+            "critical_values",
+            "district_scores",
+        )
     }
     synergies = engine_result.get("synergies")
     if synergies is None:
@@ -70,6 +78,7 @@ def build_context(
     return {
         "decisions": selected,
         "total_cost": sum(item["cost"] for item in selected),
+        "budget": rules.get("budget"),
         "base_result": engine_result.get("base_result"),
         **result_fields,
         "result": result_fields,
