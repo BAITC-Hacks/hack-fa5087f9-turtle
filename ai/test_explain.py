@@ -18,6 +18,9 @@ SAMPLE_CONTEXT = {
     "changes": [
         {"district": "Нура", "indicator": "B1", "before": 55, "after": 67.5, "delta": 12.5},
     ],
+    "synergies": [
+        {"pair": ["M10", "M12"], "district": "Нура", "indicator": "B1", "bonus": 2},
+    ],
 }
 
 
@@ -33,6 +36,7 @@ def test_missing_key_returns_grounded_fallback(monkeypatch):
     assert "+3.98" in answer
     assert "Нура: B1 +12.5" in answer
     assert "95 из 100" in answer
+    assert "M10 + M12 в районе Нура: B1 +2" in answer
     client_factory.assert_not_called()
 
 

@@ -64,6 +64,22 @@ def _fallback_explanation(context: dict) -> str:
             choice_line += f"; стоимость {total_cost:g} из {budget:g} у.е."
         lines.append(choice_line + ".")
 
+    synergies = context.get("synergies") or []
+    if synergies:
+        details = []
+        for synergy in synergies:
+            pair = " + ".join(synergy.get("pair", []))
+            district = f' в районе {synergy["district"]}' if synergy.get("district") else ""
+            indicator = synergy.get("indicator")
+            bonus = synergy.get("bonus")
+            effect = f": {indicator} +{bonus:g}" if indicator and isinstance(bonus, (int, float)) else ""
+            if pair:
+                details.append(f"{pair}{district}{effect}")
+        if details:
+            lines.append("Сработавшие синергии: " + "; ".join(details) + ".")
+    else:
+        lines.append("Синергии в выбранном наборе не сработали.")
+
     if context.get("changes") is None:
         lines.append("Детализация изменений районов движком не передана.")
     return " ".join(lines) if len(lines) > 1 else FALLBACK_TEXT
