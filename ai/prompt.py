@@ -35,9 +35,20 @@ score_delta — изменение итогового Score относитель
 """
 
 
+def _for_explanation(value):
+    """Create a display-only copy with readable floats; engine data stays untouched."""
+    if isinstance(value, float):
+        return round(value, 2)
+    if isinstance(value, dict):
+        return {key: _for_explanation(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_for_explanation(item) for item in value]
+    return value
+
+
 def build_user_prompt(context: dict) -> str:
-    """Serializes the engine context without changing or rounding its numbers."""
-    payload = json.dumps(context, ensure_ascii=False, sort_keys=True)
+    """Serializes a human-readable copy of the already calculated context."""
+    payload = json.dumps(_for_explanation(context), ensure_ascii=False, sort_keys=True)
     return (
         "Ниже приведён результат, полностью рассчитанный детерминированным движком. "
         "Объясни его по правилам системного промпта.\n\n"

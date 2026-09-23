@@ -38,13 +38,14 @@ class PromptTests(unittest.TestCase):
 
         prompt = build_user_prompt(context)
 
-        self.assertIn("56.54307", prompt)
-        self.assertIn("3.98539", prompt)
+        self.assertIn("56.54", prompt)
+        self.assertIn("3.99", prompt)
         self.assertIn("58.08", prompt)
         self.assertIn("Нура", prompt)
         self.assertIn('"M10"', prompt)
         self.assertIn('"M12"', prompt)
         self.assertIn('"bonus": 2', prompt)
+        self.assertEqual(context["score"], 56.54307)
 
 
 if __name__ == "__main__":
