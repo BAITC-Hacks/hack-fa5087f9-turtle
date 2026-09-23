@@ -84,6 +84,8 @@ if result:
             )
 
         if display_result.get("changes") is not None:
+            if "changes_district" not in st.session_state:
+                st.session_state["changes_district"] = result.get("min_district")
             render_changes(display_result["changes"], display_result.get("synergies", []))
         else:
             st.info("Движок пока не передал детализацию изменений районов.")
