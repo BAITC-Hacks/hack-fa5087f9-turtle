@@ -43,8 +43,54 @@ def apply_effects(districts: list[dict], decisions: list[dict], initiatives: lis
     Возвращает новые значения показателей по районам после применения эффектов
     (с учётом лага и синергий), обрезанные в [0, 100].
     """
-    # TODO: реализовать шаг 1 формулы
-    raise NotImplementedError
+    from copy import deepcopy
+
+    updated = deepcopy(districts)
+    initiative_by_id = {item["id"]: item for item in initiatives}
+    district_by_name = {district["name"]: district for district in updated}
+    indicators = tuple(rules["weights"])
+    horizon = rules["horizon_quarters"]
+
+    # Накапливаем изменения отдельно, чтобы clip применялся один раз в конце.
+    deltas = {
+        district["name"]: {indicator: 0.0 for indicator in indicators}
+        for district in updated
+    }
+
+    for decision in decisions:
+        initiative = initiative_by_id[decision["id"]]
+        realized_share = (horizon - initiative["lag"]) / horizon
+        if initiative["type"] == "Город":
+            target_names = district_by_name
+        else:
+            target_names = (decision["district"],)
+
+        for district_name in target_names:
+            for indicator, effect in initiative["effects"].items():
+                deltas[district_name][indicator] += effect * realized_share
+
+    decisions_by_id = {decision["id"]: decision for decision in decisions}
+    for synergy in rules.get("synergies", []):
+        first_id, second_id = synergy["pair"]
+        if first_id not in decisions_by_id or second_id not in decisions_by_id:
+            continue
+
+        if synergy["applies_to"] == "district_of_first":
+            target_names = (decisions_by_id[first_id]["district"],)
+        else:
+            target_names = district_by_name
+
+        for district_name in target_names:
+            for indicator, bonus in synergy["effect"].items():
+                deltas[district_name][indicator] += bonus
+
+    for district in updated:
+        district_deltas = deltas[district["name"]]
+        for indicator in indicators:
+            value = district[indicator] + district_deltas[indicator]
+            district[indicator] = max(0.0, min(100.0, value))
+
+    return updated
 
 
 def compute_score(updated_districts: list[dict], rules: dict) -> dict:
