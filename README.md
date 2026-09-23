@@ -83,6 +83,7 @@ data/
 engine/
   scoring.py           валидация, применение эффектов и расчёт Score
   test_validation.py   проверки правил выбора
+  test_effects.py      проверки лагов, синергий и изменений районов
   test_scoring.py      контрольные значения из ТЗ
 
 frontend/
@@ -155,8 +156,7 @@ streamlit run frontend/app.py
 ## Проверка
 
 ```bash
-pytest engine/test_validation.py
-pytest engine/test_scoring.py
+python -m pytest -q
 ```
 
 Контрольные значения из ТЗ:
