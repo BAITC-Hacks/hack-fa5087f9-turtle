@@ -7,7 +7,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from ai.context import build_context  # noqa: E402
-from ai.explain import configured_model, explain_result  # noqa: E402
+from ai.explain import available_models, explain_result  # noqa: E402
 from engine.changes import describe_changes  # noqa: E402
 from engine.scoring import load_data, run  # noqa: E402
 from frontend.changes import render_changes  # noqa: E402
@@ -90,7 +90,7 @@ if result:
         else:
             st.info("Движок пока не передал детализацию изменений районов.")
 
-        models = list(dict.fromkeys([configured_model(), "gpt-4.1", "gpt-4o-mini"]))
+        models = available_models()
         selected_model = st.selectbox("Модель AI", models, key="ai_model")
         offline = st.checkbox("Показать работу без AI", key="offline_demo",
                               help="Запрос к API не отправляется. Можно проверить резервное объяснение.")

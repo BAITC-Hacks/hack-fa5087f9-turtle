@@ -56,17 +56,26 @@ def test_fallback_keeps_score_and_all_three_tables(monkeypatch, tmp_path, failur
         factory.assert_not_called()
 
 
-def test_live_answer_and_selection_change_clear_old_result(monkeypatch):
+@pytest.mark.parametrize("model", ["gpt-4o-mini", "gpt-4.1-mini", "gpt-4.1"])
+def test_live_answer_and_selection_change_clear_old_result(monkeypatch, model):
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     client = Mock()
     client.chat.completions.create.return_value = completion_response()
     monkeypatch.setattr(explain, "OpenAI", Mock(return_value=client))
     app = AppTest.from_file(str(APP)).run()
     click(app, "Рассчитать сценарий")
-    app.selectbox(key="ai_model").select("gpt-4.1").run()
+    app.selectbox(key="ai_model").select(model).run()
     click(app, "Получить AI-объяснение")
-    assert any("AI-комментарий: gpt-4.1" in caption.value for caption in app.caption)
+    assert any(f"AI-комментарий: {model}." in caption.value for caption in app.caption)
+    assert client.chat.completions.create.call_args.kwargs["model"] == model
+    assert metrics(app)["Astana Quality of Life Score"] == "56.54"
     assert "95 из 100" in app.session_state["explanation"]
+    other_model = "gpt-4.1-mini" if model != "gpt-4.1-mini" else "gpt-4.1"
+    app.selectbox(key="ai_model").select(other_model).run()
+    assert "explanation" not in app.session_state
+    assert metrics(app)["Astana Quality of Life Score"] == "56.54"
+    click(app, "Получить AI-объяснение")
+    assert client.chat.completions.create.call_args.kwargs["model"] == other_model
     choice = app.selectbox(key="decision_4_label")
     choice.select(next(option for option in choice.options if option.startswith("M4 —"))).run()
     assert not app.exception
