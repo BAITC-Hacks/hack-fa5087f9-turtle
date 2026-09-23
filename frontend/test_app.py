@@ -77,9 +77,12 @@ def test_live_answer_and_selection_change_clear_old_result(monkeypatch, model):
     click(app, "Получить AI-объяснение")
     assert client.chat.completions.create.call_args.kwargs["model"] == other_model
     choice = app.selectbox(key="decision_4_label")
-    choice.select(next(option for option in choice.options if option.startswith("M4 —"))).run()
+    choice.select(next(option for option in choice.options if option.startswith("M11 —"))).run()
     assert not app.exception
     assert "calculation" not in app.session_state
+    assert "explanation" not in app.session_state
+    click(app, "Рассчитать сценарий")
+    assert metrics(app)["Astana Quality of Life Score"] != "56.54"
     assert "explanation" not in app.session_state
 
 

@@ -3,6 +3,8 @@
 import json
 import re
 
+from ai.prompt import INDICATOR_LABELS
+
 
 SECTIONS = {
     "improvements": "Что улучшилось",
@@ -53,7 +55,8 @@ def engine_facts(context: dict) -> dict[str, list[str]]:
     changes = context.get("changes") or []
     positives = sorted((row for row in changes if row["delta"] > 0), key=lambda row: row["delta"], reverse=True)
     for row in positives[:3]:
-        facts["improvements"].append(f'{row["district"]}: {row["indicator"]} +{number(row["delta"])}.')
+        label = INDICATOR_LABELS.get(row["indicator"], row["indicator"])
+        facts["improvements"].append(f'{row["district"]}: {row["indicator"]} +{number(row["delta"])} — {label}.')
     for text in synergy_texts(context):
         facts["improvements"].append("Синергия " + text + " (уже включена в изменения).")
     if context.get("n_crit") is not None:

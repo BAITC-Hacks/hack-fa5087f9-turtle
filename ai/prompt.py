@@ -3,6 +3,21 @@
 import json
 
 
+# Names from the task specification; calculations continue to use JSON data.
+INDICATOR_LABELS = {
+    "T1": "разгрузка дорог",
+    "T2": "доступность общественного транспорта",
+    "E1": "озеленение",
+    "E2": "качество воздуха",
+    "S1": "школы и детские сады",
+    "S2": "поликлиники и первичная помощь",
+    "B1": "безопасность улиц",
+    "B2": "безопасность дорожного движения",
+    "C1": "надёжность ЖКХ",
+    "C2": "скорость решения обращений",
+}
+
+
 EXPLANATION_FIELDS = {
     "valid",
     "score",
@@ -84,6 +99,21 @@ realized_contributions — вклад каждой меры после лага,
 При наличии стоимости и лагов поясни их как компромисс в tradeoffs.
 Нулевой n_crit означает отсутствие значений ниже порога, но не устранение всех
 городских проблем. Минимальный балл района — относительное отставание в модели.
+
+Конкретность ответа:
+explanation_focus.top_improvements содержит уже отобранные кодом крупнейшие
+улучшения с понятными названиями показателей. В improvements назови их районы
+и смысл каждого показателя, включая самый большой прирост; не заменяй это
+общими фразами «повысилось качество жизни» или «социальные показатели».
+Можно написать до трёх коротких предложений, чтобы не потерять основные изменения.
+В remaining_problems опирайся на critical_values и min_district: если критических
+значений нет, скажи об этом и укажи относительное отставание слабейшего района.
+Неизменившийся показатель сам по себе не доказывает наличие проблемы.
+Не делай такой вывод даже с оговоркой «может свидетельствовать».
+В tradeoffs объясняй долю использованного бюджета и отложенный эффект мер.
+Лаг уже учтён: не обещай дополнительного снижения показанного результата.
+Не называй меру неэффективной только из-за лага. Оставшийся бюджет не создаёт
+новый слот решения: игровой набор всегда содержит ровно пять решений.
 """
 
 
@@ -110,6 +140,18 @@ def build_user_prompt(context: dict) -> str:
             {key: value for key, value in decision.items() if key in decision_fields}
             for decision in grounded_context["decisions"]
         ]
+    changes = context.get("changes") or []
+    top_improvements = sorted(
+        (row for row in changes if row["delta"] > 0),
+        key=lambda row: row["delta"], reverse=True,
+    )[:3]
+    grounded_context["explanation_focus"] = {
+        "top_improvements": [
+            {**row, "indicator_name": INDICATOR_LABELS.get(row["indicator"], row["indicator"])}
+            for row in top_improvements
+        ],
+        "observed_decreases": [row for row in changes if row["delta"] < 0],
+    }
     payload = json.dumps(_for_explanation(grounded_context), ensure_ascii=False, sort_keys=True)
     return (
         "Ниже приведён результат, полностью рассчитанный детерминированным движком. "
