@@ -123,7 +123,6 @@ def test_describe_changes_marks_critical_values_and_synergy(simulation_data):
         {
             "pair": ["M10", "M12"],
             "district": "Нура",
-            "indicator": "B1",
-            "bonus": 2,
+            "effect": {"B1": 2},
         }
     ]

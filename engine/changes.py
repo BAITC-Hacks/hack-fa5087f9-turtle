@@ -41,14 +41,12 @@ def describe_changes(
         if synergy.get("applies_to") == "district_of_first":
             district = decisions_by_id[first_id].get("district")
 
-        for indicator, bonus in synergy["effect"].items():
-            synergies.append(
-                {
-                    "pair": [first_id, second_id],
-                    "district": district,
-                    "indicator": indicator,
-                    "bonus": bonus,
-                }
-            )
+        synergies.append(
+            {
+                "pair": [first_id, second_id],
+                "district": district,
+                "effect": dict(synergy["effect"]),
+            }
+        )
 
     return {"changes": changes, "synergies": synergies}

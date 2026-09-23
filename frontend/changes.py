@@ -65,13 +65,16 @@ def render_changes(changes: list[dict], synergies: list[dict]) -> None:
     for synergy in synergies:
         first_id, second_id = synergy["pair"]
         district = synergy.get("district") or "весь город"
-        indicator = synergy["indicator"]
-        synergy_rows.append(
-            {
-                "Пара": f"{first_id} + {second_id}",
-                "Район": district,
-                "Показатель": f"{indicator} — {INDICATOR_LABELS.get(indicator, indicator)}",
-                "Бонус": f"+{synergy['bonus']}",
-            }
-        )
+        effects = synergy.get("effect")
+        if effects is None:
+            effects = {synergy["indicator"]: synergy["bonus"]}
+        for indicator, bonus in effects.items():
+            synergy_rows.append(
+                {
+                    "Пара": f"{first_id} + {second_id}",
+                    "Район": district,
+                    "Показатель": f"{indicator} — {INDICATOR_LABELS.get(indicator, indicator)}",
+                    "Бонус": f"+{bonus}",
+                }
+            )
     st.dataframe(synergy_rows, use_container_width=True, hide_index=True)
