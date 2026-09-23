@@ -10,7 +10,7 @@ from engine.scoring import load_data, run
 
 def main():
     parser = argparse.ArgumentParser(description="Проверка живых AI-ответов на контрольном сценарии")
-    parser.add_argument("--models", nargs="+", default=["gpt-4o-mini", "gpt-4.1"])
+    parser.add_argument("--models", nargs="+", default=["gpt-4o-mini", "gpt-4.1-mini", "gpt-4.1"])
     args = parser.parse_args()
     _, _, rules = load_data()
     decisions = rules["known_results"]["example_valid_set"]["decisions"]

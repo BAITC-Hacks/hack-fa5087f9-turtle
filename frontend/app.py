@@ -7,11 +7,12 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from ai.context import build_context  # noqa: E402
-from ai.explain import configured_model, explain_result  # noqa: E402
+from ai.explain import available_models, explain_result  # noqa: E402
 from engine.changes import describe_changes  # noqa: E402
 from engine.scoring import load_data, run  # noqa: E402
 from frontend.changes import render_changes  # noqa: E402
 from frontend.selection import render_selection  # noqa: E402
+from frontend.result import render_result  # noqa: E402
 
 
 st.set_page_config(page_title="Аким на 5 часов", layout="wide")
@@ -52,36 +53,7 @@ if result:
                 "synergies": result.get("synergies") or change_summary["synergies"],
             }
         context = build_context(decisions, display_result, initiatives, districts, rules)
-        st.subheader("Итог сценария")
-        score = result.get("score")
-        score_delta = result.get("score_delta")
-        if score is not None:
-            delta_text = f"{score_delta:+.2f} к базе" if score_delta is not None else None
-            st.metric(
-                "Astana Quality of Life Score",
-                f"{score:.2f}",
-                delta=delta_text,
-            )
-
-        col1, col2, col3 = st.columns(3)
-        if result.get("d_avg") is not None:
-            col1.metric("Средний балл города", f"{result['d_avg']:.2f}")
-        if result.get("min_district") is not None:
-            col2.metric("Слабейший район", result["min_district"])
-        if result.get("n_crit") is not None:
-            col3.metric("Критические значения", result["n_crit"])
-
-        district_scores = result.get("district_scores", {})
-        if district_scores:
-            st.subheader("Баллы районов")
-            st.dataframe(
-                [
-                    {"Район": district, "Балл": round(value, 2)}
-                    for district, value in district_scores.items()
-                ],
-                use_container_width=True,
-                hide_index=True,
-            )
+        render_result(result)
 
         if display_result.get("changes") is not None:
             if "changes_district" not in st.session_state:
@@ -90,7 +62,7 @@ if result:
         else:
             st.info("Движок пока не передал детализацию изменений районов.")
 
-        models = list(dict.fromkeys([configured_model(), "gpt-4.1", "gpt-4o-mini"]))
+        models = available_models()
         selected_model = st.selectbox("Модель AI", models, key="ai_model")
         offline = st.checkbox("Показать работу без AI", key="offline_demo",
                               help="Запрос к API не отправляется. Можно проверить резервное объяснение.")

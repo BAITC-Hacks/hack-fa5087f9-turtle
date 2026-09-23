@@ -53,7 +53,9 @@ def test_missing_key_returns_grounded_fallback(monkeypatch, tmp_path):
     assert "Нура: B1 +12.5" in answer
     assert "95 из 100" in answer
     assert "M10 + M12 в районе Нура: B1 +2" in answer
-    assert "Ключ OpenAI не найден" in answer
+    assert "AI пока не подключён" in answer
+    assert "у.е.." not in answer
+    assert "OPENAI_API_KEY" not in answer and ".env" not in answer
     client_factory.assert_not_called()
 
 
