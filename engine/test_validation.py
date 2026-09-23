@@ -1,6 +1,6 @@
 import pytest
 
-from engine.scoring import load_data, validate_decisions
+from scoring import load_data, validate_decisions
 
 
 DISTRICTS = ["Есиль", "Алматы", "Сарыарка", "Байконур", "Нура"]
@@ -32,7 +32,8 @@ def check(game_data, selection):
 
 @pytest.mark.parametrize("count", [0, 4, 6])
 def test_requires_exactly_five_decisions(game_data, count):
-    assert check(game_data, VALID[:count])[0] is False
+    sample = (VALID + [{"id": "M1", "district": "Есиль"}])[:count]
+    assert check(game_data, sample)[0] is False
 
 
 def test_accepts_valid_example(game_data):

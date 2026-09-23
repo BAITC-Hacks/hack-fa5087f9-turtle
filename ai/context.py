@@ -40,14 +40,16 @@ def build_context(
     before = engine_result.get("before")
     if before is None:
         before = districts
+    result_fields = {
+        key: engine_result.get(key)
+        for key in ("score", "d_avg", "min_district", "n_crit", "district_scores")
+    }
     return {
         "decisions": selected,
         "total_cost": sum(item["cost"] for item in selected),
         "base_result": engine_result.get("base_result"),
-        "result": {
-            key: engine_result.get(key)
-            for key in ("score", "d_avg", "min_district", "n_crit", "district_scores")
-        },
+        **result_fields,
+        "result": result_fields,
         "before": before,
         "after": engine_result.get("after"),
         "changes": engine_result.get("changes"),
