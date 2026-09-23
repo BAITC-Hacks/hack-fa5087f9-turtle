@@ -246,7 +246,11 @@ def render_selection(
                         unsafe_allow_html=True,
                     )
             with right:
-                st.metric("Цена", f"{initiative['cost']} у.е.")
+                st.markdown(
+                    '<div class="initiative-price"><span>Стоимость</span>'
+                    f'<strong>{initiative["cost"]}</strong><span>у.е.</span></div>',
+                    unsafe_allow_html=True,
+                )
 
             st.session_state[type_key] = initiative.get("type")
             effect_summary = " · ".join(

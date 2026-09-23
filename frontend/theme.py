@@ -35,6 +35,8 @@ def apply_theme() -> None:
         .district-calm { color:var(--green); font-size:.68rem; line-height:1.4; }
         .decision-meta { display:flex; flex-wrap:wrap; gap:.35rem .8rem; margin:.2rem 0; color:var(--muted); font-size:.74rem; line-height:1.6; }
         .meta-pill { color:var(--accent); font-weight:650; }
+        .initiative-price { display:flex; flex-direction:column; align-items:flex-end; gap:.1rem; color:var(--muted); font-size:.7rem; }
+        .initiative-price strong { color:var(--ink); font-size:1.65rem; line-height:1.25; font-weight:650; font-variant-numeric:tabular-nums; }
         .coverage-pill { display:flex; align-items:center; gap:.5rem; min-height:2.5rem; margin-top:1.7rem; padding:.55rem .8rem; border:1px solid var(--line); border-radius:6px; color:var(--muted); background:#f8fafc; font-size:.85rem; }
         .coverage-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); }
         .budget-status-row,.budget-foot { display:flex; justify-content:space-between; align-items:center; gap:1rem; }
@@ -69,6 +71,7 @@ def apply_theme() -> None:
           .district-card,.district-card-profile { min-height:0; }
           .budget-status-row { align-items:flex-start; flex-direction:column; gap:.3rem; }
           .coverage-pill { margin-top:0; }
+          .initiative-price { flex-direction:row; align-items:baseline; gap:.4rem; }
         }
         </style>
         <header class="app-masthead">
