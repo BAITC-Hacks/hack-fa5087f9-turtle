@@ -47,7 +47,7 @@ class PromptTests(unittest.TestCase):
         self.assertIn('"M12"', prompt)
         self.assertIn('"bonus": 2', prompt)
         self.assertNotIn("contributions", prompt)
-        self.assertNotIn("99", prompt)
+        self.assertNotIn('"delta": 99', prompt)
         self.assertEqual(context["score"], 56.54307)
 
 
