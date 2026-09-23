@@ -15,16 +15,22 @@
 """
 
 import json
+from math import fsum
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
 def load_data():
-    districts = json.loads((DATA_DIR / "districts.json").read_text())
-    initiatives = json.loads((DATA_DIR / "initiatives.json").read_text())
-    rules = json.loads((DATA_DIR / "rules.json").read_text())
-    return districts, initiatives, rules
+    """Загружает список районов, каталог инициатив и правила симуляции."""
+    districts_data = json.loads(
+        (DATA_DIR / "districts.json").read_text(encoding="utf-8")
+    )
+    initiatives = json.loads(
+        (DATA_DIR / "initiatives.json").read_text(encoding="utf-8")
+    )
+    rules = json.loads((DATA_DIR / "rules.json").read_text(encoding="utf-8"))
+    return districts_data["districts"], initiatives, rules
 
 
 def validate_decisions(decisions: list[dict], initiatives: list[dict], rules: dict) -> tuple[bool, str]:
@@ -113,15 +119,56 @@ def apply_effects(districts: list[dict], decisions: list[dict], initiatives: lis
 
 def compute_score(updated_districts: list[dict], rules: dict) -> dict:
     """
-    Возвращает {"score": float, "d_avg": float, "min_district": str, "n_crit": int, "district_scores": {...}}
+    Возвращает {"score": float, "d_avg": float, "min_district": str,
+    "n_crit": int, "district_scores": {...}}.
     """
-    # TODO: реализовать шаги 2-4 формулы
-    raise NotImplementedError
+    weights = rules["weights"]
+    district_scores = {
+        district["name"]: fsum(
+            weights[indicator] * district[indicator]
+            for indicator in weights
+        )
+        for district in updated_districts
+    }
+
+    d_avg = fsum(
+        district["pop_share"] * district_scores[district["name"]]
+        for district in updated_districts
+    )
+    min_district = min(district_scores, key=district_scores.get)
+    n_crit = sum(
+        district[indicator] < rules["critical_threshold"]
+        for district in updated_districts
+        for indicator in weights
+    )
+
+    score = (
+        rules["score_weights"]["city_avg"] * d_avg
+        + rules["score_weights"]["min_district"]
+        * district_scores[min_district]
+        - rules["critical_penalty"] * n_crit
+    )
+    return {
+        "score": score,
+        "d_avg": d_avg,
+        "min_district": min_district,
+        "n_crit": n_crit,
+        "district_scores": district_scores,
+    }
 
 
 def run(decisions: list[dict]) -> dict:
-    """Точка входа: валидация -> применение эффектов -> расчёт score."""
+    """Точка входа: базовый расчёт либо валидация -> эффекты -> Score."""
     districts, initiatives, rules = load_data()
+
+    # Пустой список используется тестами для базового Score. Это отдельный
+    # режим расчёта и не делает пустой набор допустимым игровым выбором:
+    # validate_decisions([]) по-прежнему возвращает False.
+    if decisions == []:
+        result = compute_score(districts, rules)
+        result["valid"] = True
+        return result
+
     ok, reason = validate_decisions(decisions, initiatives, rules)
     if not ok:
         return {"valid": False, "reason": reason}
