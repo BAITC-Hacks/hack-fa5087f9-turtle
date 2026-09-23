@@ -48,6 +48,29 @@ def test_example_valid_set():
     assert abs(result["score"] - 56.5) < 0.5  # синергия M10+M12 должна сработать
 
 
+
+
+def test_example_result_contains_ui_and_ai_data():
+    decisions = [
+        {"id": "M7", "district": "Нура"},
+        {"id": "M8", "district": "Нура"},
+        {"id": "M10", "district": "Нура"},
+        {"id": "M12", "district": None},
+        {"id": "M5", "district": "Сарыарка"},
+    ]
+
+    result = run(decisions)
+    before = {district["name"]: district for district in result["before"]}
+    after = {district["name"]: district for district in result["after"]}
+
+    assert result["base_score"] == pytest.approx(52.55768)
+    assert result["score_delta"] == pytest.approx(
+        result["score"] - result["base_score"]
+    )
+    assert result["base_result"]["n_crit"] == 2
+    assert before["Нура"]["S1"] == 38
+    assert after["Нура"]["S1"] == pytest.approx(48)
+
 def test_budget_exceeded_invalid():
     # Пример набора, который точно превышает бюджет 100 -- подставьте свой
     decisions = [
