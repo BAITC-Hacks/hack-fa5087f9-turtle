@@ -4,7 +4,7 @@
 """
 
 import pytest
-from scoring import run
+from scoring import compute_score, load_data, run
 
 
 def test_base_score_no_actions():
@@ -13,6 +13,27 @@ def test_base_score_no_actions():
     assert result["valid"] is True
     assert abs(result["score"] - 52.56) < 0.05
 
+
+
+def test_base_score_breakdown():
+    districts, _, rules = load_data()
+    result = compute_score(districts, rules)
+
+    assert result["d_avg"] == pytest.approx(56.8624)
+    assert result["district_scores"]["Нура"] == pytest.approx(49.18)
+    assert result["min_district"] == "Нура"
+    assert result["n_crit"] == 2
+    assert result["score"] == pytest.approx(52.55768)
+
+
+def test_critical_threshold_is_strict():
+    districts, _, rules = load_data()
+    districts[-1]["S1"] = 40
+    districts[-1]["S2"] = 40
+
+    result = compute_score(districts, rules)
+
+    assert result["n_crit"] == 0
 
 def test_example_valid_set():
     decisions = [
