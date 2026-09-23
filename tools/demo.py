@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def main() -> int:
     parser = argparse.ArgumentParser(description="Проверить проект и запустить демо")
     parser.add_argument("--check-only", action="store_true", help="Проверить без запуска веб-сервера")
-    parser.add_argument("--live-ai", action="store_true", help="Дополнительно отправить один платный запрос в OpenAI")
+    parser.add_argument("--live-ai", action="store_true", help="Проверить OpenAI: до двух платных запросов при переформулировке ответа")
     parser.add_argument("--model", help="Модель для дополнительной проверки AI")
     parser.add_argument("--port", type=int, default=8501)
     args = parser.parse_args()

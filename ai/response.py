@@ -71,7 +71,7 @@ def engine_facts(context: dict) -> dict[str, list[str]]:
         text = f'Стоимость: {number(context["total_cost"])} из {number(context["budget"])} у.е.'
         if context.get("budget_remaining") is not None:
             text += f'; остаток: {number(context["budget_remaining"])} у.е.'
-        facts["tradeoffs"].append(text + ".")
+        facts["tradeoffs"].append(text.rstrip(".") + ".")
     lags = [f'{item["id"]}: {number(item["lag"])}' for item in context.get("decisions", []) if item.get("lag") is not None]
     if lags:
         facts["tradeoffs"].append("Лаги мер в кварталах: " + "; ".join(lags) + ".")
@@ -88,15 +88,27 @@ def render_response(content: str, context: dict) -> str:
     metadata_present = context.get("total_cost") is not None and any(
         item.get("lag") is not None for item in context.get("decisions", [])
     )
+    known_codes = {item["id"] for item in context.get("decisions", []) if item.get("id")}
+    known_codes.update(row["indicator"] for row in context.get("changes", []) if row.get("indicator"))
     for paragraph in paragraphs.values():
         if not isinstance(paragraph, str) or not paragraph.strip() or len(paragraph) > 1200:
             raise ValueError("Missing or oversized interpretation")
-        if re.search(r"\d", paragraph):
+        # A selected initiative ID or an indicator code is a reference, not a value.
+        without_codes = re.sub(
+            r"\b(?:M\d+|[TESBC][12])\b",
+            lambda match: "" if match.group() in known_codes else match.group(),
+            paragraph,
+        )
+        if re.search(r"\d", without_codes):
             raise ValueError("Numeric claims must come from the engine")
         if metadata_present:
-            missing = r"(?:нет|отсутств\w*|не\s+(?:указ\w*|передан\w*|извест\w*|предостав\w*)|недостаточно)"
-            topic = r"(?:стоим\w*|бюдж\w*|цен\w*|лаг\w*|срок\w*)"
-            if re.search(rf"{missing}.{{0,70}}{topic}|{topic}.{{0,70}}{missing}", paragraph, re.IGNORECASE):
+            topic = r"\b(?:стоимост\w*|бюджет\w*|цен[аыуе]|лаг(?:и|а|ов|ах|ам)?|срок\w*)\b"
+            data = r"(?:(?:данных|данные|сведений|сведения|информации|информация)\s+(?:о|об|по)\s+)?"
+            before = rf"\b(?:нет|недостаточно|отсутствуют|отсутствует)\s+{data}{topic}"
+            after = rf"{topic}\s*(?:[-—:]\s*)?(?:нет\b|неизвест\w*|отсутств\w*|не\s+(?:указ\w*|передан\w*|извест\w*|предостав\w*))"
+            # Match an actual missing-data claim, not unrelated words elsewhere
+            # in the paragraph (e.g. 'критических значений нет ... бюджет').
+            if re.search(rf"{before}|{after}", paragraph, re.IGNORECASE):
                 raise ValueError("Provided metadata was described as missing")
     facts = engine_facts(context)
     return "\n\n".join(

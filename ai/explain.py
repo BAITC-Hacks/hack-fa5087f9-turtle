@@ -5,6 +5,7 @@ AI-объяснение результата. Владелец фичи: Том�
 вклад каждой меры) и объясняет его человеку. AI НЕ считает числа сам и не придумывает их.
 """
 
+import logging
 import os
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from ai.response import RESPONSE_FORMAT, number, render_response, synergy_texts
 
 MODEL = "gpt-4o-mini"
 ENV_FILE = Path(__file__).parent.parent / ".env"
+LOGGER = logging.getLogger(__name__)
 
 FALLBACK_TEXT = (
     "Резервное объяснение без AI: подробности сценария сейчас недоступны. "
@@ -145,23 +147,44 @@ def explain_result(engine_result: dict, decisions: list[dict], *, model: str | N
 
     try:
         client = OpenAI(api_key=api_key, timeout=20.0, max_retries=0)
-        response = client.chat.completions.create(
-            model=model or configured_model(),
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": build_user_prompt(context)},
-            ],
-            temperature=0.3,
-            response_format=RESPONSE_FORMAT,
-            max_completion_tokens=900,
-        )
-        content = response.choices[0].message.content
-        if response.choices[0].finish_reason != "stop" or not content:
-            return _fallback_explanation(context, "AI не вернул полное объяснение.")
-        try:
-            return render_response(content, context)
-        except (ValueError, TypeError):
-            return _fallback_explanation(context, "Ответ AI не прошёл проверку формата или фактов. Повторите запрос.")
+        selected_model = model or configured_model()
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": build_user_prompt(context)},
+        ]
+        for attempt in range(2):
+            response = client.chat.completions.create(
+                model=selected_model,
+                messages=messages,
+                temperature=0.3,
+                response_format=RESPONSE_FORMAT,
+                max_completion_tokens=900,
+            )
+            content = response.choices[0].message.content
+            if response.choices[0].finish_reason != "stop" or not content:
+                return _fallback_explanation(context, "AI не вернул полное объяснение.")
+            try:
+                return render_response(content, context)
+            except (ValueError, TypeError) as error:
+                # Only our fixed validation reason is logged, never the key or response.
+                reason = str(error) if str(error) in {
+                    "Unexpected explanation schema", "Missing or oversized interpretation",
+                    "Numeric claims must come from the engine",
+                    "Provided metadata was described as missing",
+                } else "Invalid JSON response"
+                LOGGER.warning("AI response rejected: %s (attempt %s/2)", reason, attempt + 1)
+                if attempt == 0:
+                    messages = messages + [
+                        {"role": "assistant", "content": content},
+                        {"role": "user", "content": (
+                            "Переформулируй ответ в той же JSON-схеме. Причина отклонения: " + reason + ". "
+                            "В каждом поле одно-два предложения без цифр и чисел словами. "
+                            "Не повторяй показатели и цены: их покажет приложение. "
+                            "Стоимость, бюджет и лаги присутствуют в контексте; не называй их неизвестными. "
+                            "Опирайся на исходный контекст, не на предыдущий ответ."
+                        )},
+                    ]
+        return _fallback_explanation(context, "Ответ AI не прошёл проверку формата или фактов. Повторите запрос.")
     except AuthenticationError:
         return _fallback_explanation(
             context,
