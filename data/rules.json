@@ -11,6 +11,7 @@
   "critical_penalty": 1.0,
   "score_weights": {"city_avg": 0.7, "min_district": 0.3},
   "incompatible_pairs": [["M1", "M3"], ["M4", "M7"], ["M5", "M13"]],
+  "global_incompatible_pairs": [["M1", "M3"]],
   "synergies": [
     {"pair": ["M1", "M2"], "effect": {"T1": 2}, "applies_to": "district_of_first"},
     {"pair": ["M10", "M12"], "effect": {"B1": 2}, "applies_to": "district_of_first"},

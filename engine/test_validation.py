@@ -109,5 +109,10 @@ def test_incompatible_pairs(game_data, pair, same_district, valid):
     assert check(game_data, sample)[0] is valid
 
 
+def test_global_incompatibility_scope_is_declared_in_rules(game_data):
+    _, rules = game_data
+    assert ["M1", "M3"] in rules["global_incompatible_pairs"]
+
+
 def test_validation_does_not_depend_on_order(game_data):
     assert check(game_data, VALID) == check(game_data, list(reversed(VALID)))

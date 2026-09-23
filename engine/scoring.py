@@ -97,13 +97,17 @@ def validate_decisions(decisions: list[dict], initiatives: list[dict], rules: di
 
     chosen = {initiative_id for initiative_id in ids}
     selected_district = {initiative["id"]: district for initiative, district in selected}
+    global_pairs = {
+        frozenset(pair)
+        for pair in rules.get("global_incompatible_pairs", [])
+        if len(pair) == 2
+    }
     for pair in rules.get("incompatible_pairs", []):
         if len(pair) != 2 or not set(pair).issubset(chosen):
             continue
         first, second = pair
-        # M1/M3 являются альтернативами по всему городу; остальные пары
-        # конфликтуют только при попытке разместить обе меры в одном районе.
-        if {first, second} == {"M1", "M3"} or selected_district.get(first) == selected_district.get(second):
+        # Правила из JSON явно различают конфликт во всём городе и в одном районе.
+        if frozenset(pair) in global_pairs or selected_district.get(first) == selected_district.get(second):
             return False, f"Мероприятия {first} и {second} несовместимы в выбранных районах."
 
     return True, ""
