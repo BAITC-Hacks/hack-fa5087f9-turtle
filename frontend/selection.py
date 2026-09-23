@@ -273,5 +273,8 @@ def render_selection(
     _render_budget_summary(total_cost, budget, len(decisions), decision_count)
     valid, _reason = validate_decisions(decisions, initiatives, rules)
     if valid:
-        st.success("Набор подходит под правила симуляции. Можно рассчитать сценарий.", icon="✅")
+        st.markdown(
+            '<p class="validation-ready" role="status">Набор соответствует правилам. Можно рассчитать сценарий.</p>',
+            unsafe_allow_html=True,
+        )
     return decisions, total_cost

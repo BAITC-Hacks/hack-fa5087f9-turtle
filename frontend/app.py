@@ -18,7 +18,7 @@ from frontend.theme import apply_theme  # noqa: E402
 
 
 st.set_page_config(
-    page_title="Аким на 5 часов · городской симулятор",
+    page_title="Fifth Move · городской симулятор",
     page_icon=str(Path(__file__).with_name("favicon.svg")),
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -50,7 +50,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 if not is_valid:
-    st.error(validation_reason, icon="⚠️")
+    st.error(validation_reason)
 
 if st.button("Рассчитать сценарий", type="primary", use_container_width=True):
     if is_valid:
@@ -61,11 +61,11 @@ if st.button("Рассчитать сценарий", type="primary", use_contai
         st.session_state.pop("ai_context", None)
         st.session_state.pop("explanation_settings", None)
     else:
-        st.error(validation_reason, icon="⚠️")
+        st.error(validation_reason)
 
 result = st.session_state.get("calculation")
 if result is None:
-    st.info("Контрольный набор из задания уже загружен. Измените решения или рассчитайте его результат.")
+    st.caption("Можно начать с готового примера или выбрать собственные решения.")
 elif not result.get("valid", False):
     st.error(result.get("reason", "Набор решений не прошёл проверку."))
 else:
