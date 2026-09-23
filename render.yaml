@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: akim-city-simulator
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements-tested.txt
+    startCommand: python -m streamlit run frontend/app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true
+    healthCheckPath: /_stcore/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.7
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_API_KEY
+        sync: false

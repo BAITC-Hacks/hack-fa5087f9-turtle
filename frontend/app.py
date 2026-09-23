@@ -19,7 +19,7 @@ from frontend.theme import apply_theme  # noqa: E402
 
 st.set_page_config(
     page_title="Аким на 5 часов · городской симулятор",
-    page_icon="🏙️",
+    page_icon=str(Path(__file__).with_name("favicon.svg")),
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -97,12 +97,13 @@ else:
     st.markdown("### AI объясняет рассчитанный результат")
     st.caption("Числа рассчитывает движок; модель объясняет уже готовые эффекты, бюджет, лаги и компромиссы.")
     models = available_models()
-    selected_model = st.selectbox("Модель AI", models, key="ai_model")
-    offline = st.checkbox(
-        "Показать работу без AI",
-        key="offline_demo",
-        help="Запрос к API не отправляется. Можно проверить резервное объяснение.",
-    )
+    with st.expander("Настройки объяснения", expanded=False):
+        selected_model = st.selectbox("Модель AI", models, key="ai_model")
+        offline = st.checkbox(
+            "Показать работу без AI",
+            key="offline_demo",
+            help="Запрос к API не отправляется. Можно проверить резервное объяснение.",
+        )
     settings = (selected_model, offline)
     if st.session_state.get("explanation_settings") != settings:
         st.session_state.pop("explanation", None)
@@ -125,3 +126,9 @@ else:
             st.markdown(st.session_state["explanation"])
     with st.expander("Проверить факты, переданные AI", expanded=False):
         st.json(context, expanded=False)
+
+st.markdown(
+    '<footer class="app-footer">Учебная симуляция · Числа рассчитывает движок, '
+    'AI объясняет результат · Astana Innovations / HackAlem AI</footer>',
+    unsafe_allow_html=True,
+)

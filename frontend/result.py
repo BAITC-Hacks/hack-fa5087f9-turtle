@@ -8,15 +8,15 @@ def render_result(result: dict) -> None:
     st.subheader("Итог сценария")
     score = result.get("score")
     score_delta = result.get("score_delta")
+    score_col, col1, col2, col3 = st.columns([1.5, 1, 1, 1])
     if score is not None:
         delta_text = f"{score_delta:+.2f} к базе" if score_delta is not None else None
-        st.metric(
+        score_col.metric(
             "Astana Quality of Life Score",
             f"{score:.2f}",
             delta=delta_text,
         )
 
-    col1, col2, col3 = st.columns(3)
     if result.get("d_avg") is not None:
         col1.metric("Средний балл города", f"{result['d_avg']:.2f}")
     if result.get("min_district") is not None:
@@ -34,4 +34,9 @@ def render_result(result: dict) -> None:
             ],
             use_container_width=True,
             hide_index=True,
+            column_config={
+                "Балл": st.column_config.ProgressColumn(
+                    "Балл / 100", min_value=0, max_value=100, format="%.2f"
+                )
+            },
         )
